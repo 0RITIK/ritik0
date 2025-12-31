@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, MessageCircle, X, Shield } from 'lucide-react';
+import { Phone, X, Shield, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/stores/appStore';
+import { useAlarm } from '@/hooks/useAlarm';
 import { cn } from '@/lib/utils';
 
 interface SOSButtonProps {
@@ -11,65 +12,47 @@ interface SOSButtonProps {
 }
 
 export function SOSButton({ size = 'default', className }: SOSButtonProps) {
-  const { sosActive, triggerSOS, cancelSOS, trustedContacts, currentLocation, sosMessage, preferredMessagingApp } = useAppStore();
+  const {
+    sosActive,
+    triggerSOS,
+    cancelSOS,
+    trustedContacts,
+    currentLocation,
+    sosMessage,
+    preferredMessagingApp,
+    autoCallOnSOS,
+  } = useAppStore();
+
+  const { startAlarm, stopAlarm } = useAlarm();
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdDuration = 1500; // 1.5 seconds to activate
 
-  const handleStart = useCallback(() => {
-    if (sosActive) return;
-    
-    setIsHolding(true);
-    const startTime = Date.now();
-    
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / holdDuration, 1);
-      setHoldProgress(progress);
-      
-      if (progress >= 1) {
-        clearInterval(interval);
-        triggerSOS();
-        setIsHolding(false);
-        setHoldProgress(0);
-        
-        // Trigger haptic feedback if available
-        if ('vibrate' in navigator) {
-          navigator.vibrate([200, 100, 200, 100, 200]);
-        }
-        
-        // Send emergency messages
-        sendEmergencyMessages();
-      }
-    }, 50);
-    
-    const handleEnd = () => {
-      clearInterval(interval);
-      setIsHolding(false);
-      setHoldProgress(0);
-      window.removeEventListener('mouseup', handleEnd);
-      window.removeEventListener('touchend', handleEnd);
-    };
-    
-    window.addEventListener('mouseup', handleEnd);
-    window.addEventListener('touchend', handleEnd);
-  }, [sosActive, triggerSOS]);
+  // Start/stop alarm when SOS state changes
+  useEffect(() => {
+    if (sosActive) {
+      startAlarm();
+    } else {
+      stopAlarm();
+    }
+  }, [sosActive, startAlarm, stopAlarm]);
 
-  const sendEmergencyMessages = () => {
-    const locationUrl = currentLocation 
+  const sendEmergencyMessages = useCallback(() => {
+    const locationUrl = currentLocation
       ? `https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}`
       : 'Location unavailable';
-    
+
     const message = encodeURIComponent(
       `${sosMessage}\n\nMy live location: ${locationUrl}\nTime: ${new Date().toLocaleTimeString()}`
     );
-    
-    // Get primary contact
-    const primaryContact = trustedContacts.find(c => c.isPrimary && c.notifyOnSOS);
-    
+
+    // Get contacts to notify
+    const contactsToNotify = trustedContacts.filter((c) => c.notifyOnSOS);
+    const primaryContact = contactsToNotify.find((c) => c.isPrimary) || contactsToNotify[0];
+
     if (primaryContact) {
       const phone = primaryContact.phone.replace(/\D/g, '');
-      
+
       if (preferredMessagingApp === 'whatsapp') {
         window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
       } else if (preferredMessagingApp === 'sms') {
@@ -77,8 +60,54 @@ export function SOSButton({ size = 'default', className }: SOSButtonProps) {
       } else if (preferredMessagingApp === 'telegram') {
         window.open(`https://t.me/share/url?url=${locationUrl}&text=${message}`, '_blank');
       }
+
+      // Auto-call if enabled
+      if (autoCallOnSOS) {
+        setTimeout(() => {
+          window.open(`tel:${primaryContact.phone}`, '_blank');
+        }, 500);
+      }
     }
-  };
+  }, [currentLocation, sosMessage, trustedContacts, preferredMessagingApp, autoCallOnSOS]);
+
+  const handleStart = useCallback(() => {
+    if (sosActive) return;
+
+    setIsHolding(true);
+    const startTime = Date.now();
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / holdDuration, 1);
+      setHoldProgress(progress);
+
+      if (progress >= 1) {
+        clearInterval(interval);
+        triggerSOS();
+        setIsHolding(false);
+        setHoldProgress(0);
+
+        // Trigger haptic feedback if available
+        if ('vibrate' in navigator) {
+          navigator.vibrate([200, 100, 200, 100, 200, 100, 500]);
+        }
+
+        // Send emergency messages
+        sendEmergencyMessages();
+      }
+    }, 50);
+
+    const handleEnd = () => {
+      clearInterval(interval);
+      setIsHolding(false);
+      setHoldProgress(0);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchend', handleEnd);
+    };
+
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchend', handleEnd);
+  }, [sosActive, triggerSOS, sendEmergencyMessages]);
 
   const handleCancel = () => {
     cancelSOS();
@@ -90,7 +119,7 @@ export function SOSButton({ size = 'default', className }: SOSButtonProps) {
   const buttonSize = size === 'large' ? 'sos-lg' : 'sos';
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn('relative', className)}>
       <AnimatePresence mode="wait">
         {sosActive ? (
           <motion.div
@@ -113,44 +142,57 @@ export function SOSButton({ size = 'default', className }: SOSButtonProps) {
                 animate={{ scale: [1, 2.2], opacity: [0.4, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
               />
-              
+
               <Button
                 variant="sos"
                 size={buttonSize}
                 onClick={handleCancel}
                 className="relative z-10 animate-shake"
               >
-                <Shield className="w-8 h-8" />
+                <Volume2 className="w-8 h-8 animate-pulse" />
               </Button>
             </div>
-            
-            <motion.p
+
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-danger font-semibold text-center"
+              className="text-center"
             >
-              SOS ACTIVE
-            </motion.p>
-            
+              <p className="text-danger font-bold text-lg">🚨 SOS ACTIVE 🚨</p>
+              <p className="text-muted-foreground text-sm">Alarm sounding • Help requested</p>
+            </motion.div>
+
             <div className="flex gap-3">
               <Button
                 variant="danger"
                 size="sm"
                 onClick={() => {
-                  const primaryContact = trustedContacts.find(c => c.isPrimary);
+                  window.open('tel:911', '_blank');
+                }}
+              >
+                <Phone className="w-4 h-4" />
+                Call 911
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  const primaryContact = trustedContacts.find((c) => c.isPrimary);
                   if (primaryContact) {
                     window.open(`tel:${primaryContact.phone}`, '_blank');
                   }
                 }}
+                disabled={!trustedContacts.some((c) => c.isPrimary)}
               >
                 <Phone className="w-4 h-4" />
                 Call Contact
               </Button>
-              <Button variant="outline" size="sm" onClick={handleCancel}>
-                <X className="w-4 h-4" />
-                Cancel
-              </Button>
             </div>
+
+            <Button variant="outline" size="sm" onClick={handleCancel}>
+              <X className="w-4 h-4" />
+              Cancel SOS
+            </Button>
           </motion.div>
         ) : (
           <motion.div
@@ -187,27 +229,24 @@ export function SOSButton({ size = 'default', className }: SOSButtonProps) {
                 />
               </svg>
             )}
-            
+
             <Button
               variant="sos"
               size={buttonSize}
               onMouseDown={handleStart}
               onTouchStart={handleStart}
-              className={cn(
-                "relative z-10 select-none",
-                isHolding && "scale-95"
-              )}
+              className={cn('relative z-10 select-none', isHolding && 'scale-95')}
             >
-              <span className="font-bold">SOS</span>
+              <span className="font-bold text-xl">SOS</span>
             </Button>
-            
+
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
               className="text-muted-foreground text-xs text-center mt-3"
             >
-              Hold to activate
+              Hold for {holdDuration / 1000}s to activate
             </motion.p>
           </motion.div>
         )}
