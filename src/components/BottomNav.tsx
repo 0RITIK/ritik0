@@ -16,7 +16,7 @@ export function BottomNav() {
   const sosActive = useAppStore((state) => state.sosActive);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 glass-dark border-t border-border/50 safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
@@ -26,19 +26,19 @@ export function BottomNav() {
               key={path}
               to={path}
               className={cn(
-                "relative flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-colors tap-highlight",
+                "relative flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {isActive && (
                 <motion.div
                   layoutId="nav-indicator"
-                  className="absolute inset-0 bg-primary/10 rounded-xl"
+                  className="absolute inset-0 bg-primary/15 rounded-xl"
                   transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                 />
               )}
               <Icon className="w-5 h-5 relative z-10" />
-              <span className="text-2xs mt-1 font-medium relative z-10">{label}</span>
+              <span className="text-[10px] mt-1 font-medium relative z-10">{label}</span>
             </NavLink>
           );
         })}
@@ -47,8 +47,12 @@ export function BottomNav() {
         <NavLink
           to="/sos"
           className={cn(
-            "relative flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-colors tap-highlight",
-            sosActive ? "text-danger" : "text-muted-foreground hover:text-foreground"
+            "relative flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-colors",
+            sosActive 
+              ? "text-danger" 
+              : location.pathname === '/sos'
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
           )}
         >
           {sosActive && (
@@ -58,9 +62,16 @@ export function BottomNav() {
               transition={{ duration: 1, repeat: Infinity }}
             />
           )}
+          {location.pathname === '/sos' && !sosActive && (
+            <motion.div
+              layoutId="nav-indicator"
+              className="absolute inset-0 bg-primary/15 rounded-xl"
+              transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+            />
+          )}
           <Shield className={cn("w-5 h-5 relative z-10", sosActive && "text-danger")} />
           <span className={cn(
-            "text-2xs mt-1 font-medium relative z-10",
+            "text-[10px] mt-1 font-medium relative z-10",
             sosActive && "text-danger"
           )}>
             {sosActive ? 'Active' : 'SOS'}

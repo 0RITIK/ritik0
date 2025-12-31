@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Navigation, Clock, Shield, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { Navigation, Clock, Shield, ChevronUp, ChevronDown, X, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/stores/appStore';
 import { cn } from '@/lib/utils';
@@ -57,16 +57,19 @@ export function RouteSelector() {
     return 'text-danger';
   };
 
-  const getRouteColor = (type: Route['type']) => {
-    if (type === 'safest') return 'border-safe bg-safe/10';
-    if (type === 'balanced') return 'border-caution bg-caution/10';
-    return 'border-danger bg-danger/10';
+  const getScoreBg = (score: number) => {
+    if (score >= 80) return 'bg-safe/20';
+    if (score >= 60) return 'bg-caution/20';
+    return 'bg-danger/20';
   };
 
-  const getRouteBadgeColor = (type: Route['type']) => {
-    if (type === 'safest') return 'bg-safe text-safe-foreground';
-    if (type === 'balanced') return 'bg-caution text-caution-foreground';
-    return 'bg-danger text-danger-foreground';
+  const getRouteBorder = (type: Route['type'], isSelected: boolean) => {
+    const base = type === 'safest' 
+      ? 'border-safe' 
+      : type === 'balanced' 
+        ? 'border-caution' 
+        : 'border-danger';
+    return isSelected ? `${base} border-2` : 'border-border border';
   };
 
   if (!destination || routes.length === 0) return null;
@@ -76,30 +79,31 @@ export function RouteSelector() {
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
-      className="fixed bottom-24 left-4 right-4 z-30"
+      className="fixed bottom-24 left-4 right-4 z-40"
     >
-      <div className="glass rounded-2xl shadow-xl overflow-hidden">
+      {/* Solid background card */}
+      <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border/50">
+        <div className="flex items-center justify-between p-4 bg-secondary/50 border-b border-border">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">Navigating to</p>
-            <p className="font-semibold truncate">{destinationName || 'Selected Location'}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Navigating to</p>
+            <p className="font-semibold truncate text-foreground">{destinationName || 'Selected Location'}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon-sm"
               onClick={() => setIsExpanded(!isExpanded)}
             >
-              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
             </Button>
             <Button variant="ghost" size="icon-sm" onClick={clearDestination}>
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </Button>
           </div>
         </div>
 
-        {/* Route Options */}
+        {/* Route Options - Expanded */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -108,28 +112,33 @@ export function RouteSelector() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-3 max-h-[40vh] overflow-y-auto">
                 {routes.map((route) => (
                   <button
                     key={route.id}
                     onClick={() => handleRouteSelect(route)}
                     className={cn(
-                      'w-full p-4 rounded-xl border-2 transition-all tap-highlight text-left',
-                      getRouteColor(route.type),
-                      selectedRoute?.id === route.id
-                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                        : 'opacity-70 hover:opacity-100'
+                      'w-full p-4 rounded-xl transition-all text-left bg-secondary/30',
+                      getRouteBorder(route.type, selectedRoute?.id === route.id),
+                      selectedRoute?.id === route.id && 'ring-1 ring-primary/50'
                     )}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', getRouteBadgeColor(route.type))}>
-                          {route.type === 'safest' ? '🛡️ Safest' : route.type === 'balanced' ? '⚖️ Balanced' : '⚡ Fastest'}
+                        <span className={cn(
+                          'text-xs px-2 py-1 rounded-full font-semibold',
+                          route.type === 'safest' ? 'bg-safe/20 text-safe' :
+                          route.type === 'balanced' ? 'bg-caution/20 text-caution' :
+                          'bg-danger/20 text-danger'
+                        )}>
+                          {route.type === 'safest' ? '🛡️ SAFEST' : 
+                           route.type === 'balanced' ? '⚖️ BALANCED' : 
+                           '⚡ FASTEST'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className={cn('flex items-center gap-1 px-2 py-1 rounded-lg', getScoreBg(route.safetyScore))}>
                         <Shield className={cn('w-4 h-4', getScoreColor(route.safetyScore))} />
-                        <span className={cn('text-xl font-bold', getScoreColor(route.safetyScore))}>
+                        <span className={cn('text-lg font-bold', getScoreColor(route.safetyScore))}>
                           {route.safetyScore}
                         </span>
                       </div>
@@ -147,14 +156,15 @@ export function RouteSelector() {
                     </div>
 
                     {route.warnings.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {route.warnings.map((warning, i) => (
-                          <span
+                      <div className="mt-3 space-y-1">
+                        {route.warnings.slice(0, 2).map((warning, i) => (
+                          <div
                             key={i}
-                            className="text-xs px-2 py-0.5 rounded-full bg-caution/20 text-caution"
+                            className="flex items-center gap-2 text-xs text-caution bg-caution/10 px-2 py-1 rounded"
                           >
-                            ⚠️ {warning}
-                          </span>
+                            <AlertTriangle className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{warning}</span>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -166,11 +176,11 @@ export function RouteSelector() {
                 <Button
                   variant="safe"
                   size="lg"
-                  className="w-full"
+                  className="w-full font-semibold"
                   onClick={startNavigation}
                   disabled={!selectedRoute}
                 >
-                  <Navigation className="w-5 h-5" />
+                  <Navigation className="w-5 h-5 mr-2" />
                   Start Navigation
                 </Button>
               </div>
@@ -178,19 +188,24 @@ export function RouteSelector() {
           )}
         </AnimatePresence>
 
-        {/* Collapsed summary */}
+        {/* Collapsed Summary */}
         {!isExpanded && selectedRoute && (
           <div className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', getRouteBadgeColor(selectedRoute.type))}>
+              <span className={cn(
+                'text-xs px-2 py-1 rounded-full font-semibold',
+                selectedRoute.type === 'safest' ? 'bg-safe/20 text-safe' :
+                selectedRoute.type === 'balanced' ? 'bg-caution/20 text-caution' :
+                'bg-danger/20 text-danger'
+              )}>
                 {selectedRoute.type === 'safest' ? '🛡️' : selectedRoute.type === 'balanced' ? '⚖️' : '⚡'}
               </span>
-              <span className="text-sm">
+              <span className="text-sm text-foreground">
                 {formatDuration(selectedRoute.duration)} • {formatDistance(selectedRoute.distance)}
               </span>
             </div>
             <Button variant="safe" size="sm" onClick={startNavigation}>
-              <Navigation className="w-4 h-4" />
+              <Navigation className="w-4 h-4 mr-1" />
               Go
             </Button>
           </div>
