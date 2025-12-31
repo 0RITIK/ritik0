@@ -62,12 +62,12 @@ interface AppState {
   setIsNavigating: (navigating: boolean) => void;
 }
 
-// Mock risk zones data
-const mockRiskZones: RiskZone[] = [
+// Generate mock risk zones near user location
+const generateMockRiskZones = (userLat: number, userLng: number): RiskZone[] => [
   {
     id: '1',
-    center: { lat: 40.7580, lng: -73.9855 },
-    radius: 150,
+    center: { lat: userLat + 0.003, lng: userLng - 0.002 },
+    radius: 80,
     riskLevel: 'high',
     reason: 'Multiple harassment reports after 9 PM',
     reportedAt: new Date().toISOString(),
@@ -75,28 +75,50 @@ const mockRiskZones: RiskZone[] = [
   },
   {
     id: '2',
-    center: { lat: 40.7550, lng: -73.9900 },
-    radius: 100,
+    center: { lat: userLat - 0.002, lng: userLng + 0.003 },
+    radius: 60,
     riskLevel: 'medium',
     reason: 'Poor street lighting reported',
     reportedAt: new Date().toISOString(),
   },
   {
     id: '3',
-    center: { lat: 40.7610, lng: -73.9820 },
-    radius: 80,
+    center: { lat: userLat + 0.001, lng: userLng + 0.004 },
+    radius: 50,
     riskLevel: 'medium',
     reason: 'Isolated underpass - low foot traffic',
     reportedAt: new Date().toISOString(),
   },
+  {
+    id: '4',
+    center: { lat: userLat - 0.004, lng: userLng - 0.001 },
+    radius: 40,
+    riskLevel: 'low',
+    reason: 'Minor incident reported last week',
+    reportedAt: new Date().toISOString(),
+  },
 ];
+
+// Default NYC risk zones (fallback)
+const defaultRiskZones: RiskZone[] = generateMockRiskZones(40.7484, -73.9857);
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Location
       currentLocation: null,
-      setCurrentLocation: (location) => set({ currentLocation: location }),
+      setCurrentLocation: (location) => {
+        const state = get();
+        // Generate risk zones near user if this is first location
+        if (location && state.riskZones === defaultRiskZones) {
+          set({ 
+            currentLocation: location,
+            riskZones: generateMockRiskZones(location.lat, location.lng)
+          });
+        } else {
+          set({ currentLocation: location });
+        }
+      },
       
       // Destination
       destination: null,
@@ -110,7 +132,7 @@ export const useAppStore = create<AppState>()(
       setSelectedRoute: (route) => set({ selectedRoute: route }),
       
       // Risk zones
-      riskZones: mockRiskZones,
+      riskZones: defaultRiskZones,
       setRiskZones: (zones) => set({ riskZones: zones }),
       addRiskZone: (zone) => set((state) => ({ riskZones: [...state.riskZones, zone] })),
       
