@@ -28,20 +28,16 @@ export function RiskZoneWarning() {
   useEffect(() => {
     if (!currentLocation) return;
 
-    // Check if user is near any risk zone
     for (const zone of riskZones) {
       if (dismissedZones.has(zone.id)) continue;
 
       const distance = haversineDistance(currentLocation, zone.center);
       
-      // Warn if within 1.5x the zone radius (approaching)
       if (distance <= zone.radius * 1.5) {
-        // Check active hours if defined
         if (zone.activeHours) {
           const hour = new Date().getHours();
           const { start, end } = zone.activeHours;
           
-          // Handle overnight ranges (e.g., 21:00 to 6:00)
           const isActive = start > end 
             ? (hour >= start || hour <= end)
             : (hour >= start && hour <= end);
@@ -52,7 +48,6 @@ export function RiskZoneWarning() {
         if (zone.riskLevel === 'high' || zone.riskLevel === 'medium') {
           setActiveWarning(zone);
           
-          // Haptic feedback
           if ('vibrate' in navigator) {
             navigator.vibrate([100, 50, 100]);
           }
@@ -76,27 +71,28 @@ export function RiskZoneWarning() {
           initial={{ opacity: 0, y: -50, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -50, scale: 0.9 }}
-          className="fixed top-20 left-4 right-4 z-50 safe-top"
+          className="fixed top-20 left-4 right-4 z-[60] safe-top"
         >
+          {/* Solid background alert */}
           <div
             className={`
-              rounded-2xl p-4 shadow-xl backdrop-blur-lg border-2
+              rounded-2xl p-4 shadow-xl border-2
               ${activeWarning.riskLevel === 'high' 
-                ? 'bg-danger/90 border-danger' 
-                : 'bg-caution/90 border-caution'}
+                ? 'bg-danger text-danger-foreground border-danger' 
+                : 'bg-caution text-caution-foreground border-caution'}
             `}
           >
             <div className="flex items-start gap-3">
               <div className={`
                 w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                ${activeWarning.riskLevel === 'high' ? 'bg-danger-foreground/20' : 'bg-caution-foreground/20'}
+                ${activeWarning.riskLevel === 'high' ? 'bg-white/20' : 'bg-black/10'}
               `}>
                 <AlertTriangle className="w-5 h-5" />
               </div>
               
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm mb-1">
-                  {activeWarning.riskLevel === 'high' ? '⚠️ High Risk Area' : '⚡ Caution Area'}
+                <h3 className="font-bold text-sm mb-1">
+                  {activeWarning.riskLevel === 'high' ? '⚠️ HIGH RISK AREA' : '⚡ CAUTION AREA'}
                 </h3>
                 <p className="text-sm opacity-90">
                   {activeWarning.reason}
@@ -115,7 +111,7 @@ export function RiskZoneWarning() {
                 onClick={dismissWarning}
                 className="shrink-0 hover:bg-white/20"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
             
@@ -123,11 +119,11 @@ export function RiskZoneWarning() {
               <Button
                 variant="secondary"
                 size="sm"
-                className="flex-1 bg-white/20 hover:bg-white/30 border-0"
+                className="flex-1 bg-white/20 hover:bg-white/30 border-0 text-inherit"
                 onClick={dismissWarning}
               >
                 <Shield className="w-4 h-4 mr-1" />
-                I'm aware
+                I understand
               </Button>
             </div>
           </div>

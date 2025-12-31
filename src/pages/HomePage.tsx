@@ -14,22 +14,25 @@ export default function HomePage() {
         <meta name="description" content="Find the safest walking route with real-time risk awareness and emergency SOS features." />
       </Helmet>
       
-      <div className="relative h-screen h-[100dvh]">
-        <SafetyMap className="absolute inset-0" />
+      <div className="relative h-screen h-[100dvh] overflow-hidden">
+        {/* Map Layer - z-0 */}
+        <SafetyMap className="absolute inset-0 z-0" />
         
-        {/* Top search bar */}
-        <div className="absolute top-0 left-0 right-0 z-30 p-4 safe-top">
+        {/* UI Layers with proper z-index hierarchy */}
+        
+        {/* Legend - z-30 */}
+        <RiskZoneLegend />
+        
+        {/* Search bar - z-40 */}
+        <div className="absolute top-0 left-0 right-0 z-40 p-4 safe-top">
           <DestinationSearch />
         </div>
         
-        {/* Risk zone warnings */}
-        <RiskZoneWarning />
-        
-        {/* Route options */}
+        {/* Route options - z-40 (handled in component) */}
         <RouteSelector />
         
-        {/* Legend */}
-        <RiskZoneLegend />
+        {/* Risk warnings - z-60 (handled in component, highest priority) */}
+        <RiskZoneWarning />
       </div>
     </>
   );

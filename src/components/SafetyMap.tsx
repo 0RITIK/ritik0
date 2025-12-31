@@ -101,16 +101,17 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
       const filteredZones = zones.filter(z => z.riskLevel === level);
       
       filteredZones.forEach(zone => {
+        // radius is already in meters from the store
         const circle = L.circle([zone.center.lat, zone.center.lng], {
-          radius: zone.radius * 10, // Convert to meters
+          radius: zone.radius,
           fillColor: color,
-          fillOpacity: 0.25,
+          fillOpacity: 0.3,
           color: color,
           weight: 2,
-          opacity: 0.6,
+          opacity: 0.7,
         });
         
-        circle.bindPopup(`<strong>${zone.reason}</strong>`);
+        circle.bindPopup(`<div style="padding: 8px; font-family: system-ui;"><strong style="color: ${color};">${level.toUpperCase()} RISK</strong><p style="margin-top: 4px;">${zone.reason}</p></div>`);
         riskZoneLayers.current?.addLayer(circle);
       });
     };
