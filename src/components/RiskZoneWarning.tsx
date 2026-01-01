@@ -64,71 +64,72 @@ export function RiskZoneWarning() {
     setActiveWarning(null);
   };
 
+  if (!activeWarning) return null;
+
   return (
-    <AnimatePresence>
-      {activeWarning && (
-        <motion.div
-          initial={{ opacity: 0, y: -50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -50, scale: 0.9 }}
-          className="fixed top-20 left-4 right-4 z-[60] safe-top"
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={activeWarning.id}
+        initial={{ opacity: 0, y: -50, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -50, scale: 0.9 }}
+        className="fixed top-20 left-4 right-4 z-[60] safe-top"
+      >
+        {/* Solid background alert */}
+        <div
+          className={`
+            rounded-2xl p-4 shadow-xl border-2
+            ${activeWarning.riskLevel === 'high' 
+              ? 'bg-danger text-danger-foreground border-danger' 
+              : 'bg-caution text-caution-foreground border-caution'}
+          `}
         >
-          {/* Solid background alert */}
-          <div
-            className={`
-              rounded-2xl p-4 shadow-xl border-2
-              ${activeWarning.riskLevel === 'high' 
-                ? 'bg-danger text-danger-foreground border-danger' 
-                : 'bg-caution text-caution-foreground border-caution'}
-            `}
-          >
-            <div className="flex items-start gap-3">
-              <div className={`
-                w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                ${activeWarning.riskLevel === 'high' ? 'bg-white/20' : 'bg-black/10'}
-              `}>
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-sm mb-1">
-                  {activeWarning.riskLevel === 'high' ? '⚠️ HIGH RISK AREA' : '⚡ CAUTION AREA'}
-                </h3>
-                <p className="text-sm opacity-90">
-                  {activeWarning.reason}
-                </p>
-                
-                {activeWarning.activeHours && (
-                  <p className="text-xs opacity-75 mt-1">
-                    Active: {activeWarning.activeHours.start}:00 - {activeWarning.activeHours.end}:00
-                  </p>
-                )}
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={dismissWarning}
-                className="shrink-0 hover:bg-white/20"
-              >
-                <X className="w-5 h-5" />
-              </Button>
+          <div className="flex items-start gap-3">
+            <div className={`
+              w-10 h-10 rounded-full flex items-center justify-center shrink-0
+              ${activeWarning.riskLevel === 'high' ? 'bg-white/20' : 'bg-black/10'}
+            `}>
+              <AlertTriangle className="w-5 h-5" />
             </div>
             
-            <div className="flex gap-2 mt-3">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1 bg-white/20 hover:bg-white/30 border-0 text-inherit"
-                onClick={dismissWarning}
-              >
-                <Shield className="w-4 h-4 mr-1" />
-                I understand
-              </Button>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-sm mb-1">
+                {activeWarning.riskLevel === 'high' ? '⚠️ HIGH RISK AREA' : '⚡ CAUTION AREA'}
+              </h3>
+              <p className="text-sm opacity-90">
+                {activeWarning.reason}
+              </p>
+              
+              {activeWarning.activeHours && (
+                <p className="text-xs opacity-75 mt-1">
+                  Active: {activeWarning.activeHours.start}:00 - {activeWarning.activeHours.end}:00
+                </p>
+              )}
             </div>
+            
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={dismissWarning}
+              className="shrink-0 hover:bg-white/20"
+            >
+              <X className="w-5 h-5" />
+            </Button>
           </div>
-        </motion.div>
-      )}
+          
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1 bg-white/20 hover:bg-white/30 border-0 text-inherit"
+              onClick={dismissWarning}
+            >
+              <Shield className="w-4 h-4 mr-1" />
+              I understand
+            </Button>
+          </div>
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 }
