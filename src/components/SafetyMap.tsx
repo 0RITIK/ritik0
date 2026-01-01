@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppStore } from '@/stores/appStore';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import type { RiskZone } from '@/types';
+import { Navigation } from 'lucide-react';
 
 interface SafetyMapProps {
   className?: string;
@@ -17,9 +18,10 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
   const riskZoneLayers = useRef<L.LayerGroup | null>(null);
   const routeLayer = useRef<L.Polyline | null>(null);
   const destinationMarker = useRef<L.Marker | null>(null);
+  const [isFollowing, setIsFollowing] = useState(true);
 
   const { location } = useGeolocation();
-  const { setCurrentLocation, riskZones, selectedRoute, destination } = useAppStore();
+  const { setCurrentLocation, riskZones, selectedRoute, destination, isNavigating } = useAppStore();
 
   // Update store with current location
   useEffect(() => {
@@ -63,7 +65,7 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
     };
   }, []);
 
-  // Update user location marker
+  // Update user location marker with smooth animation during navigation
   useEffect(() => {
     if (!map.current || !location) return;
 
@@ -71,12 +73,14 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
       className: 'user-location-marker',
       html: `
         <div class="relative">
-          <div class="absolute inset-0 w-4 h-4 bg-primary/30 rounded-full animate-ping"></div>
-          <div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg relative z-10"></div>
+          <div class="absolute inset-0 w-5 h-5 bg-primary/30 rounded-full animate-ping"></div>
+          <div class="w-5 h-5 bg-primary rounded-full border-2 border-white shadow-lg relative z-10 flex items-center justify-center">
+            ${isNavigating ? '<div class="w-2 h-2 border-l-2 border-t-2 border-white transform rotate-45 -translate-y-px"></div>' : ''}
+          </div>
         </div>
       `,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
     });
 
     if (!userMarker.current) {
@@ -86,9 +90,36 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
       // Center map on first location
       map.current.setView([location.lat, location.lng], 16);
     } else {
+      // Smooth transition to new location
       userMarker.current.setLatLng([location.lat, location.lng]);
+      userMarker.current.setIcon(userIcon);
+      
+      // Follow user when navigating and following mode is on
+      if (isNavigating && isFollowing) {
+        map.current.panTo([location.lat, location.lng], {
+          animate: true,
+          duration: 0.5,
+        });
+      }
     }
-  }, [location]);
+  }, [location, isNavigating, isFollowing]);
+
+  // Detect when user drags map to disable auto-follow
+  useEffect(() => {
+    if (!map.current) return;
+
+    const handleDragStart = () => {
+      if (isNavigating) {
+        setIsFollowing(false);
+      }
+    };
+
+    map.current.on('dragstart', handleDragStart);
+
+    return () => {
+      map.current?.off('dragstart', handleDragStart);
+    };
+  }, [isNavigating]);
 
   // Add risk zones
   useEffect(() => {
@@ -184,7 +215,31 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
       .addTo(map.current);
   }, [destination]);
 
+  // Re-center button handler
+  const handleRecenter = () => {
+    if (map.current && location) {
+      setIsFollowing(true);
+      map.current.panTo([location.lat, location.lng], {
+        animate: true,
+        duration: 0.3,
+      });
+    }
+  };
+
   return (
-    <div ref={mapContainer} className={className} />
+    <div className={`relative ${className}`}>
+      <div ref={mapContainer} className="absolute inset-0" />
+      
+      {/* Re-center button - shown during navigation when not following */}
+      {isNavigating && !isFollowing && (
+        <button
+          onClick={handleRecenter}
+          className="absolute bottom-32 right-4 z-40 w-12 h-12 bg-card/95 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center border border-border hover:bg-accent transition-colors"
+          aria-label="Re-center map"
+        >
+          <Navigation className="w-5 h-5 text-primary" />
+        </button>
+      )}
+    </div>
   );
 }
