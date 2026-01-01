@@ -5,8 +5,12 @@ import { RouteSelector } from '@/components/RouteSelector';
 import { RiskZoneLegend } from '@/components/RiskZoneLegend';
 import { RiskZoneWarning } from '@/components/RiskZoneWarning';
 import { DestinationSearch } from '@/components/DestinationSearch';
+import { ActiveNavigation } from '@/components/ActiveNavigation';
+import { useAppStore } from '@/stores/appStore';
 
 export default function HomePage() {
+  const isNavigating = useAppStore(state => state.isNavigating);
+
   return (
     <>
       <Helmet>
@@ -23,13 +27,18 @@ export default function HomePage() {
         {/* Legend - z-30 */}
         <RiskZoneLegend />
         
-        {/* Search bar - z-40 */}
-        <div className="absolute top-0 left-0 right-0 z-40 p-4 safe-top">
-          <DestinationSearch />
-        </div>
+        {/* Active navigation overlay - z-50 (highest for navigation UI) */}
+        {isNavigating && <ActiveNavigation />}
         
-        {/* Route options - z-40 (handled in component) */}
-        <RouteSelector />
+        {/* Search bar - z-40 (hidden during navigation) */}
+        {!isNavigating && (
+          <div className="absolute top-0 left-0 right-0 z-40 p-4 safe-top">
+            <DestinationSearch />
+          </div>
+        )}
+        
+        {/* Route options - z-40 (hidden during navigation) */}
+        {!isNavigating && <RouteSelector />}
         
         {/* Risk warnings - z-60 (handled in component, highest priority) */}
         <RiskZoneWarning />
