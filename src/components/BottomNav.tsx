@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Map, AlertTriangle, User, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -22,7 +22,7 @@ export function BottomNav() {
           const isActive = location.pathname === path;
           
           return (
-            <NavLink
+            <Link
               key={path}
               to={path}
               className={cn(
@@ -39,12 +39,12 @@ export function BottomNav() {
               )}
               <Icon className="w-5 h-5 relative z-10" />
               <span className="text-[10px] mt-1 font-medium relative z-10">{label}</span>
-            </NavLink>
+            </Link>
           );
         })}
         
         {/* SOS Quick Access */}
-        <NavLink
+        <Link
           to="/sos"
           className={cn(
             "relative flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-colors",
@@ -76,7 +76,7 @@ export function BottomNav() {
           )}>
             {sosActive ? 'Active' : 'SOS'}
           </span>
-        </NavLink>
+        </Link>
       </div>
     </nav>
   );

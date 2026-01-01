@@ -32,11 +32,17 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainer.current) return;
+    
+    // Cleanup existing map if any
+    if (map.current) {
+      map.current.remove();
+      map.current = null;
+    }
 
     const initialCenter: [number, number] = location
       ? [location.lat, location.lng]
-      : [40.7484, -73.9857]; // Default to NYC
+      : [52.3676, 4.9041]; // Default to Amsterdam (visible in screenshot)
 
     map.current = L.map(mapContainer.current, {
       center: initialCenter,
@@ -46,7 +52,7 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
 
     // Add dark tile layer (CartoDB Dark Matter - free, no API key)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 20,
     }).addTo(map.current);
@@ -57,11 +63,18 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
     // Initialize risk zone layer group
     riskZoneLayers.current = L.layerGroup().addTo(map.current);
 
+    // Force a resize to ensure tiles load
+    setTimeout(() => {
+      map.current?.invalidateSize();
+    }, 100);
+
     onMapReady?.(map.current);
 
     return () => {
-      map.current?.remove();
-      map.current = null;
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
     };
   }, []);
 
@@ -227,8 +240,11 @@ export function SafetyMap({ className, onMapReady }: SafetyMapProps) {
   };
 
   return (
-    <div className={`relative ${className}`}>
-      <div ref={mapContainer} className="absolute inset-0" />
+    <div className={`relative ${className}`} style={{ width: '100%', height: '100%' }}>
+      <div 
+        ref={mapContainer} 
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+      />
       
       {/* Re-center button - shown during navigation when not following */}
       {isNavigating && !isFollowing && (
