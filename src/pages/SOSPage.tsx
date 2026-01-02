@@ -1,10 +1,18 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Phone, MessageCircle, MapPin, Clock, Users, AlertCircle } from 'lucide-react';
+import { Phone, MessageCircle, MapPin, Clock, Users, AlertCircle, Send } from 'lucide-react';
 import { SOSButton } from '@/components/SOSButton';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/stores/appStore';
+import { 
+  sendWhatsAppMessage, 
+  sendSMSMessage, 
+  sendTelegramMessage,
+  buildEmergencyMessage,
+  callEmergencyServices,
+  makePhoneCall 
+} from '@/utils/messaging';
 
 export default function SOSPage() {
   const { 
@@ -17,34 +25,39 @@ export default function SOSPage() {
   } = useAppStore();
 
   const primaryContact = trustedContacts.find(c => c.isPrimary);
+
+  const sendQuickMessage = (app: 'whatsapp' | 'sms' | 'telegram') => {
+    if (!primaryContact) return;
+    
+    const message = buildEmergencyMessage(sosMessage, currentLocation);
+    const options = { phone: primaryContact.phone, message, location: currentLocation };
+    
+    switch (app) {
+      case 'whatsapp':
+        sendWhatsAppMessage(options);
+        break;
+      case 'sms':
+        sendSMSMessage(options);
+        break;
+      case 'telegram':
+        sendTelegramMessage(options);
+        break;
+    }
+  };
+
+  const handleCallEmergency = () => {
+    callEmergencyServices();
+  };
+
+  const handleCallPrimaryContact = () => {
+    if (primaryContact) {
+      makePhoneCall(primaryContact.phone);
+    }
+  };
+  
   const locationUrl = currentLocation 
     ? `https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}`
     : null;
-
-  const sendQuickMessage = (app: 'whatsapp' | 'sms') => {
-    if (!primaryContact) return;
-    
-    const phone = primaryContact.phone.replace(/\D/g, '');
-    const message = encodeURIComponent(
-      `${sosMessage}\n\nMy location: ${locationUrl || 'Unable to get location'}\nTime: ${new Date().toLocaleTimeString()}`
-    );
-    
-    if (app === 'whatsapp') {
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-    } else {
-      window.open(`sms:${phone}?body=${decodeURIComponent(message)}`, '_blank');
-    }
-  };
-
-  const callEmergency = () => {
-    window.open('tel:911', '_blank');
-  };
-
-  const callPrimaryContact = () => {
-    if (primaryContact) {
-      window.open(`tel:${primaryContact.phone}`, '_blank');
-    }
-  };
 
   return (
     <>
@@ -85,7 +98,7 @@ export default function SOSPage() {
             <Button
               variant="danger"
               size="lg"
-              onClick={callEmergency}
+              onClick={handleCallEmergency}
               className="flex-col h-20 gap-2"
             >
               <Phone className="w-6 h-6" />
@@ -96,8 +109,8 @@ export default function SOSPage() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={callPrimaryContact}
-                className="flex-col h-20 gap-2"
+                onClick={handleCallPrimaryContact}
+                className="flex-col h-20 gap-2 border-primary/30"
               >
                 <Users className="w-6 h-6" />
                 <span className="text-xs truncate max-w-full">Call {primaryContact.name}</span>
@@ -108,10 +121,10 @@ export default function SOSPage() {
               variant="secondary"
               size="lg"
               onClick={() => sendQuickMessage('whatsapp')}
-              className="flex-col h-20 gap-2"
+              className="flex-col h-20 gap-2 bg-green-600/20 hover:bg-green-600/30 border-green-600/30"
               disabled={!primaryContact}
             >
-              <MessageCircle className="w-6 h-6" />
+              <MessageCircle className="w-6 h-6 text-green-500" />
               <span className="text-xs">WhatsApp</span>
             </Button>
 
@@ -122,8 +135,19 @@ export default function SOSPage() {
               className="flex-col h-20 gap-2"
               disabled={!primaryContact}
             >
-              <MessageCircle className="w-6 h-6" />
+              <Send className="w-6 h-6" />
               <span className="text-xs">Send SMS</span>
+            </Button>
+            
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => sendQuickMessage('telegram')}
+              className="flex-col h-20 gap-2 bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/30 col-span-2"
+              disabled={!primaryContact}
+            >
+              <Send className="w-6 h-6 text-blue-400" />
+              <span className="text-xs">Send via Telegram</span>
             </Button>
           </div>
         </motion.div>
