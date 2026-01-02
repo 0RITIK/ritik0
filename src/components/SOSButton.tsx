@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, X, Shield, Volume2 } from 'lucide-react';
+import { Phone, X, Volume2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/stores/appStore';
 import { useAlarm } from '@/hooks/useAlarm';
 import { cn } from '@/lib/utils';
+import { sendEmergencyAlerts, makePhoneCall, callEmergencyServices } from '@/utils/messaging';
 
 interface SOSButtonProps {
   size?: 'default' | 'large';
@@ -38,36 +39,13 @@ export function SOSButton({ size = 'default', className }: SOSButtonProps) {
   }, [sosActive, startAlarm, stopAlarm]);
 
   const sendEmergencyMessages = useCallback(() => {
-    const locationUrl = currentLocation
-      ? `https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}`
-      : 'Location unavailable';
-
-    const message = encodeURIComponent(
-      `${sosMessage}\n\nMy live location: ${locationUrl}\nTime: ${new Date().toLocaleTimeString()}`
+    sendEmergencyAlerts(
+      trustedContacts,
+      sosMessage,
+      currentLocation,
+      preferredMessagingApp,
+      autoCallOnSOS
     );
-
-    // Get contacts to notify
-    const contactsToNotify = trustedContacts.filter((c) => c.notifyOnSOS);
-    const primaryContact = contactsToNotify.find((c) => c.isPrimary) || contactsToNotify[0];
-
-    if (primaryContact) {
-      const phone = primaryContact.phone.replace(/\D/g, '');
-
-      if (preferredMessagingApp === 'whatsapp') {
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-      } else if (preferredMessagingApp === 'sms') {
-        window.open(`sms:${phone}?body=${decodeURIComponent(message)}`, '_blank');
-      } else if (preferredMessagingApp === 'telegram') {
-        window.open(`https://t.me/share/url?url=${locationUrl}&text=${message}`, '_blank');
-      }
-
-      // Auto-call if enabled
-      if (autoCallOnSOS) {
-        setTimeout(() => {
-          window.open(`tel:${primaryContact.phone}`, '_blank');
-        }, 500);
-      }
-    }
   }, [currentLocation, sosMessage, trustedContacts, preferredMessagingApp, autoCallOnSOS]);
 
   const handleStart = useCallback(() => {
@@ -162,13 +140,11 @@ export function SOSButton({ size = 'default', className }: SOSButtonProps) {
               <p className="text-muted-foreground text-sm">Alarm sounding • Help requested</p>
             </motion.div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap justify-center">
               <Button
                 variant="danger"
                 size="sm"
-                onClick={() => {
-                  window.open('tel:911', '_blank');
-                }}
+                onClick={callEmergencyServices}
               >
                 <Phone className="w-4 h-4" />
                 Call 911
@@ -179,13 +155,22 @@ export function SOSButton({ size = 'default', className }: SOSButtonProps) {
                 onClick={() => {
                   const primaryContact = trustedContacts.find((c) => c.isPrimary);
                   if (primaryContact) {
-                    window.open(`tel:${primaryContact.phone}`, '_blank');
+                    makePhoneCall(primaryContact.phone);
                   }
                 }}
                 disabled={!trustedContacts.some((c) => c.isPrimary)}
               >
                 <Phone className="w-4 h-4" />
                 Call Contact
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={sendEmergencyMessages}
+                disabled={!trustedContacts.some((c) => c.notifyOnSOS)}
+              >
+                <MessageCircle className="w-4 h-4" />
+                Resend Alert
               </Button>
             </div>
 
